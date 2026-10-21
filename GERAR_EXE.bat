@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title AndreNotas v1.0 - Gerar EXE
+title AndreNotas v1.0.2 - Gerar EXE
 if not exist "AndreNotas.py" (echo ERRO: AndreNotas.py nao encontrado & pause & exit /b 1)
 if not exist "andrenote.ico" (echo ERRO: andrenote.ico nao encontrado & pause & exit /b 1)
 where py >nul 2>&1
