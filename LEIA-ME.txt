@@ -1,0 +1,26 @@
+AndreNotas v1.0 — FREEWARE
+Desenvolvido por André Henrique G. Lécio (andrelecio)
+https://andrelecio.net.br
+
+REQUISITOS
+Windows 10 ou 11 e Python 3 com Tkinter para executar o código.
+Para gerar o EXE: execute GERAR_EXE.bat (instala PyInstaller se necessário).
+Para montar o instalador: instale Inno Setup 6 e execute GERAR_INSTALADOR.bat.
+
+NOVIDADES v1.0
+- Ctrl+G: ir para linha.
+- Ctrl+roda do mouse: zoom do editor; Ctrl+mais / Ctrl+menos.
+- Exibir: quebra automática, somente leitura, tamanho e configurações.
+- Arquivo: reabrir último documento; codificação UTF-8, UTF-8 BOM, ANSI e UTF-16.
+- Pergunta para reabrir o último documento ao iniciar.
+- Cópia de emergência em %LOCALAPPDATA%\AndreNotas\recuperacao.json durante a edição.
+- Barra de status com linha, coluna, total de linhas, caracteres e codificação.
+- Preferências persistidas em %LOCALAPPDATA%\AndreNotas\config.json.
+
+IMPORTANTE
+O backup de emergência não substitui salvar seu arquivo. O instalador registra
+AndreNotas para TXT, mas a associação padrão é gerenciada pelo Windows 11.
+A fonte Kumbh Sans precisa estar instalada no computador.
+
+A aplicação e as rotinas foram verificadas no ambiente Linux com desktop virtual.
+A compilação do EXE, impressão e instalador precisam de validação no Windows.
