@@ -1,4 +1,4 @@
-AndreNotas v1.0 — FREEWARE
+AndreNotas v1.0.2 — FREEWARE
 Desenvolvido por André Henrique G. Lécio (andrelecio)
 https://andrelecio.net.br
 
@@ -7,7 +7,7 @@ Windows 10 ou 11 e Python 3 com Tkinter para executar o código.
 Para gerar o EXE: execute GERAR_EXE.bat (instala PyInstaller se necessário).
 Para montar o instalador: instale Inno Setup 6 e execute GERAR_INSTALADOR.bat.
 
-NOVIDADES v1.0
+NOVIDADES v1.0.2
 - Ctrl+G: ir para linha.
 - Ctrl+roda do mouse: zoom do editor; Ctrl+mais / Ctrl+menos.
 - Exibir: quebra automática, somente leitura, tamanho e configurações.
@@ -24,3 +24,6 @@ A fonte Kumbh Sans precisa estar instalada no computador.
 
 A aplicação e as rotinas foram verificadas no ambiente Linux com desktop virtual.
 A compilação do EXE, impressão e instalador precisam de validação no Windows.
+
+DPI: A interface usa a escala de texto do Windows sem ampliar os PNGs duas vezes.
+Janela: o tamanho e a posicao sao preservados ao fechar.

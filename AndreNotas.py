@@ -1,4 +1,4 @@
-"""AndreNotas v0.9 — editor leve, um documento por vez, Python/Tkinter."""
+"""AndreNotas v1.0.2 — editor leve, um documento por vez, Python/Tkinter."""
 from __future__ import annotations
 
 import json
@@ -15,7 +15,7 @@ import tkinter as tk
 from tkinter import filedialog, font as tkfont, messagebox, ttk
 
 APP_NAME = "AndreNotas"
-VERSION = "1.0"
+VERSION = "1.0.2"
 BG = "#f4f8fd"
 SURFACE = "#ffffff"
 BLUE = "#d9ebfb"
@@ -43,11 +43,48 @@ EXTENSIONS = [
 
 
 
+def enable_windows_dpi_awareness():
+    """Must run before Tk creates its first native window."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        # SYSTEM_AWARE is the stable mode for Tk 8.6 on Windows 11.
+        # Tk uses the system's display scale for UI font sizes.
+        if ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-2)):
+            return
+    except (AttributeError, OSError, ValueError):
+        pass
+    try:
+        import ctypes
+        if ctypes.windll.shcore.SetProcessDpiAwareness(1) == 0:
+            return
+    except (AttributeError, OSError, ValueError):
+        pass
+    try:
+        import ctypes
+        ctypes.windll.user32.SetProcessDPIAware()
+    except (AttributeError, OSError):
+        pass
+
+
+def screen_dpi_factor(window):
+    """Physical DPI ratio compared with standard 96 DPI."""
+    if os.name == "nt":
+        try:
+            import ctypes
+            dpi = ctypes.windll.user32.GetDpiForWindow(window.winfo_id())
+            if dpi:
+                return max(1.0, min(4.0, dpi / 96.0))
+        except (AttributeError, OSError):
+            pass
+    return max(1.0, min(4.0, window.winfo_fpixels("1i") / 96.0))
+
+
 class AndreNotas(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.geometry("1000x750")
-        self.minsize(420, 340)
+        # Defer geometry until saved preferences and DPI are available.
         self.configure(bg=BG)
         self.path: Path | None = None
         self.encoding = "utf-8"
@@ -61,6 +98,9 @@ class AndreNotas(tk.Tk):
             self.preferences = json.loads(self.settings_file.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             self.preferences = {}
+        self.dpi_factor = screen_dpi_factor(self)
+        # Tk normally inherits screen scaling once process DPI awareness is enabled.
+        self._restore_window_geometry()
         self.wrap_on = tk.BooleanVar(value=self.preferences.get("wrap", True))
         self.readonly_on = tk.BooleanVar(value=False)
         self.last_path = self.preferences.get("last_path", "")
@@ -87,6 +127,8 @@ class AndreNotas(tk.Tk):
         self._build_style()
         self._build_menus()
         self._build_ui()
+        self._normal_geometry = self._read_geometry()
+        self.bind("<Configure>", self._track_window_geometry, add="+")
         self._bind_keys()
         self.protocol("WM_DELETE_WINDOW", self.quit_app)
         self.new_file(first=True)
@@ -101,7 +143,8 @@ class AndreNotas(tk.Tk):
         if os.name == "nt":
             try:
                 import ctypes
-                ctypes.windll.shcore.SetProcessDpiAwareness(1)
+                # DPI awareness is configured before Tk starts (not here).
+                pass
             except Exception:
                 pass
             try:
@@ -783,6 +826,74 @@ class AndreNotas(tk.Tk):
         self.search_all()
         self.result_var.set(f"{count} {'substituições' if count != 1 else 'substituição'}")
 
+    def _restore_window_geometry(self):
+        """Restore physical window geometry without double-applying Windows DPI scaling.
+
+        Tk fonts/ttk use Windows DPI scaling already. Window coordinates and
+        dimensions returned by Tk are physical pixels under DPI awareness.
+        """
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
+        self.minsize(600, 400)
+        stored = self.preferences.get("window_geometry")
+        if isinstance(stored, dict):
+            try:
+                w = int(stored["width"])
+                h = int(stored["height"])
+                x = int(stored["x"])
+                y = int(stored["y"])
+                # v1.0.1 incorrectly multiplied/restored geometry using DPI.
+                # Its data remains in real pixels: preserve dimensions verbatim.
+                w = min(screen_w, max(600, w))
+                h = min(screen_h, max(400, h))
+                if x >= screen_w - 80 or y >= screen_h - 80 or x + w < 80 or y + h < 80:
+                    x = max(0, (screen_w - w) // 2)
+                    y = max(0, (screen_h - h) // 2)
+                self.geometry(f"{w}x{h}{x:+d}{y:+d}")
+                if stored.get("maximized") and os.name == "nt":
+                    self.after(100, lambda: self.state("zoomed"))
+                return
+            except (KeyError, ValueError, TypeError, tk.TclError):
+                pass
+        # Use the display's usable viewport rather than multiplying a fixed
+        # 1000x750 by scaling a second time. Fit toolbar and window on screen.
+        w = min(screen_w, max(700, int(screen_w * 0.72)))
+        h = min(screen_h, max(500, int(screen_h * 0.78)))
+        x = max(0, (screen_w - w) // 2)
+        y = max(0, (screen_h - h) // 2)
+        self.geometry(f"{w}x{h}+{x}+{y}")
+
+    def _read_geometry(self):
+        # wm geometry uses outer-window coordinates; winfo_y may include titlebar
+        # offset on some window managers, causing the window to drift each restart.
+        current = self.geometry()
+        found = re.fullmatch(r"(\d+)x(\d+)([+-]\d+)([+-]\d+)", current)
+        if found:
+            return tuple(map(int, found.groups()))
+        return (self.winfo_width(), self.winfo_height(), self.winfo_x(), self.winfo_y())
+
+    def _save_window_geometry(self):
+        maximized = self.state() == "zoomed"
+        try:
+            # On Windows wm_geometry when zoomed can carry restored geometry; remember the
+            # normal geometry continuously, instead of saving full-screen bounds.
+            geom = self._normal_geometry
+            if not maximized and self.state() == "normal":
+                geom = self._read_geometry()
+            self.preferences["window_geometry"] = dict(
+                width=geom[0], height=geom[1], x=geom[2], y=geom[3],
+                maximized=maximized, dpi_factor=self.dpi_factor)
+        except (AttributeError, tk.TclError):
+            pass
+
+    def _track_window_geometry(self, event=None):
+        if event is not None and event.widget is not self:
+            return
+        if self.state() == "normal":
+            w, h = self.winfo_width(), self.winfo_height()
+            if w >= 100 and h >= 100:
+                self._normal_geometry = self._read_geometry()
+
     def _persist_preferences(self):
         self.preferences.update(font_size=self.editor_font.cget("size"),
                                 wrap=self.wrap_on.get(), lines=self.show_lines.get(),
@@ -969,10 +1080,12 @@ class AndreNotas(tk.Tk):
 
     def quit_app(self):
         if self._confirm_discard():
+            self._save_window_geometry()
             self._remove_recovery()
             self._persist_preferences()
             self.destroy()
 
 
 if __name__ == "__main__":
+    enable_windows_dpi_awareness()
     AndreNotas().mainloop()

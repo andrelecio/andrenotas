@@ -1,5 +1,5 @@
 ﻿#define MyAppName "AndreNotas"
-#define MyAppVersion "1.0"
+#define MyAppVersion "1.0.2"
 #define MyAppExeName "AndreNotas.exe"
 [Setup]
 AppId={{9B2D89CB-C86F-4D7D-A5C6-6A2CDA4D9C50}
@@ -10,7 +10,7 @@ AppPublisherURL=https://andrelecio.net.br
 DefaultDirName={localappdata}\Programs\AndreNotas
 DefaultGroupName=AndreNotas
 OutputDir=instalador
-OutputBaseFilename=AndreNotas_Setup_v1.0
+OutputBaseFilename=AndreNotas_Setup_v1.0.2
 SetupIconFile=andrenote.ico
 UninstallDisplayIcon={app}\AndreNotas.exe
 Compression=lzma
